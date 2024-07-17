@@ -5,6 +5,8 @@ import json
 from datetime import datetime, timedelta
 import simpy
 import random
+import gzip
+import numpy as np
 
 # referencing modular script in same path as this script
 # functions to generate a .xlsx file with series of patient
@@ -27,19 +29,19 @@ data_2019 = pd.DataFrame(data_2019)
 # of the represented step in patient triage lifecycle
 
 # Create new columns for timestamps in the dataframe to show process durations
-data_2019['Arrival_Time'] = data_2019['datetime'].apply(lambda dt: pd.Timestamp(dt).time())
-data_2019['Wait_Time'] = NaN #pd.NaT
-data_2019['Checkin_Time'] = NaN #pd.NaT
-data_2019['Nurse_Consult_Time'] = NaN #pd.NaT
-data_2019['Doctor_Consult_Time'] = NaN #pd.NaT
-data_2019['Technician_Scan_Time'] = NaN #pd.NaT
-data_2019['Nurse_Injection_Time'] = NaN #pd.NaT
-data_2019['Nurse_Surgery_Time'] = NaN #pd.NaT
-data_2019['Doctor_Surgery_Time'] = NaN #pd.NaT
-data_2019['Surgery_Dress_Time'] = NaN #pd.NaT
-data_2019['Surgery_Recover_Time'] = NaN #pd.NaT
-data_2019['Checkout_Time'] = NaN #pd.NaT
-data_2019['Billing_Time'] = NaN #pd.NaT
+# data_2019['Arrival_Time'] = data_2019['datetime'].apply(lambda dt: pd.Timestamp(dt).time())
+data_2019['Wait_Time'] = np.NaN #pd.NaT
+data_2019['Checkin_Time'] = np.NaN #pd.NaT
+data_2019['Nurse_Consult_Time'] = np.NaN #pd.NaT
+data_2019['Doctor_Consult_Time'] = np.NaN #pd.NaT
+data_2019['Technician_Scan_Time'] = np.NaN #pd.NaT
+data_2019['Nurse_Injection_Time'] = np.NaN #pd.NaT
+data_2019['Nurse_Surgery_Time'] = np.NaN #pd.NaT
+data_2019['Doctor_Surgery_Time'] = np.NaN #pd.NaT
+data_2019['Surgery_Dress_Time'] = np.NaN #pd.NaT
+data_2019['Surgery_Recover_Time'] = np.NaN #pd.NaT
+data_2019['Checkout_Time'] = np.NaN #pd.NaT
+data_2019['Billing_Time'] = np.NaN #pd.NaT
 
 # create column to store cumulative
 # minute duration of patient processes
@@ -121,131 +123,137 @@ def run_simulation(data_2019):
     save_to_json_file()
 
     # Initialize a JSON flow file, review outputs.json to debug process issues
-    json_flow = {
-        "events": []
-    }
+json_flow = {
+    "events": []
+}
 
-    # define logger for JSON
+# define logger for JSON
+json_flow = {
+    "events": []
+}
 
-    def log_event(event_description):
-        """Utility function to log events to the global json_flow."""
-        global json_flow
-        json_flow["events"].append(event_description)
+# define logger for JSON
 
-    def Random_Wait(env, patient_id):
-        yield env.timeout(random.expovariate(1 / 50))
+def log_event(event_description):
+    """Utility function to log events to the global json_flow."""
+    global json_flow
+    json_flow["events"].append(event_description)
 
-    def Checkin(env, checkin_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Checkin", "time": env.now})
-        checkin_request = checkin_resource.request()
-        yield checkin_request
-        log_event({"patient_id": patient_id, "action": "starting Checkin", "time": env.now})
-        yield env.timeout(random.randint(6, 18))
-        checkin_resource.release(checkin_request)
-        log_event({"patient_id": patient_id, "action": "finished Checkin", "time": env.now})
+def Random_Wait(env, patient_id):
+    yield env.timeout(random.expovariate(1/50)) 
+    
+def Checkin(env, checkin_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Checkin", "time": env.now})
+    checkin_request = checkin_resource.request()
+    yield checkin_request
+    log_event({"patient_id": patient_id, "action": "starting Checkin", "time": env.now})
+    yield env.timeout(random.randint(6, 18))
+    checkin_resource.release(checkin_request)
+    log_event({"patient_id": patient_id, "action": "finished Checkin", "time": env.now})
 
-    def Billing(env, billing_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Billing", "time": env.now})
-        billing_request = billing_resource.request()
-        yield billing_request
-        log_event({"patient_id": patient_id, "action": "starting Billing", "time": env.now})
-        yield env.timeout(random.randint(3, 12))
-        billing_resource.release(billing_request)
-        log_event({"patient_id": patient_id, "action": "finished Billing", "time": env.now})
+def Billing(env, billing_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Billing", "time": env.now})
+    billing_request = billing_resource.request()
+    yield billing_request
+    log_event({"patient_id": patient_id, "action": "starting Billing", "time": env.now})
+    yield env.timeout(random.randint(3, 12))
+    billing_resource.release(billing_request)
+    log_event({"patient_id": patient_id, "action": "finished Billing", "time": env.now})
 
-    def Nurse_Consult(env, nurse_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Nurse_Consult", "time": env.now})
-        nurse_request = nurse_resource.request()
-        yield nurse_request
-        log_event({"patient_id": patient_id, "action": "starting Nurse_Consult", "time": env.now})
-        yield env.timeout(random.expovariate(1 / 25))
-        nurse_resource.release(nurse_request)
-        log_event({"patient_id": patient_id, "action": "finished Nurse_Consult", "time": env.now})
+def Nurse_Consult(env, nurse_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Nurse_Consult", "time": env.now})
+    nurse_request = nurse_resource.request()
+    yield nurse_request
+    log_event({"patient_id": patient_id, "action": "starting Nurse_Consult", "time": env.now})
+    yield env.timeout(random.expovariate(1/25))
+    nurse_resource.release(nurse_request)
+    log_event({"patient_id": patient_id, "action": "finished Nurse_Consult", "time": env.now})
 
-    def Nurse_Injection(env, nurse_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Nurse_Injection", "time": env.now})
-        nurse_request = nurse_resource.request()
-        yield nurse_request
-        log_event({"patient_id": patient_id, "action": "starting Nurse_Injection", "time": env.now})
-        yield env.timeout(random.randint(3, 8))
-        nurse_resource.release(nurse_request)
-        log_event({"patient_id": patient_id, "action": "finished Nurse_Injection", "time": env.now})
+def Nurse_Injection(env, nurse_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Nurse_Injection", "time": env.now})
+    nurse_request = nurse_resource.request()
+    yield nurse_request
+    log_event({"patient_id": patient_id, "action": "starting Nurse_Injection", "time": env.now})
+    yield env.timeout(random.randint(3, 8))
+    nurse_resource.release(nurse_request)
+    log_event({"patient_id": patient_id, "action": "finished Nurse_Injection", "time": env.now})
+    
+def Nurse_Surgery(env, nurse_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Nurse_Surgery", "time": env.now})
+    nurse_request = nurse_resource.request()
+    yield nurse_request
+    log_event({"patient_id": patient_id, "action": "starting Nurse_Surgery", "time": env.now})
+    yield env.timeout(random.expovariate(1/80))
+    nurse_resource.release(nurse_request)
+    log_event({"patient_id": patient_id, "action": "finished Nurse_Surgery", "time": env.now})
 
-    # consider consolidating nurse, doctor surgery with yield doctor_request, nurse_request so both resources take
-    # same time
-    def Nurse_Surgery(env, nurse_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Nurse_Surgery", "time": env.now})
-        nurse_request = nurse_resource.request()
-        yield nurse_request
-        log_event({"patient_id": patient_id, "action": "starting Nurse_Surgery", "time": env.now})
-        yield env.timeout(random.expovariate(1 / 80))
-        nurse_resource.release(nurse_request)
-        log_event({"patient_id": patient_id, "action": "finished Nurse_Surgery", "time": env.now})
+def Doctor_Surgery(env, doctor_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Doctor_Surgery", "time": env.now})
+    doctor_request = doctor_resource.request()
+    yield doctor_request
+    log_event({"patient_id": patient_id, "action": "starting Doctor_Surgery", "time": env.now})
+    yield env.timeout(random.expovariate(1/80))
+    doctor_resource.release(doctor_request)
+    log_event({"patient_id": patient_id, "action": "finished Doctor_Surgery", "time": env.now})
 
-    def Doctor_Surgery(env, doctor_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Doctor_Surgery", "time": env.now})
-        doctor_request = doctor_resource.request()
-        yield doctor_request
-        log_event({"patient_id": patient_id, "action": "starting Doctor_Surgery", "time": env.now})
-        yield env.timeout(random.expovariate(1 / 80))
-        doctor_resource.release(doctor_request)
-        log_event({"patient_id": patient_id, "action": "finished Doctor_Surgery", "time": env.now})
+def Doctor_Consult(env, doctor_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Doctor_Consult", "time": env.now})
+    doctor_request = doctor_resource.request()
+    yield doctor_request
+    log_event({"patient_id": patient_id, "action": "starting Doctor_Consult", "time": env.now})
+    yield env.timeout(random.randint(6, 12))
+    doctor_resource.release(doctor_request)
+    log_event({"patient_id": patient_id, "action": "finished Doctor_Consult", "time": env.now})
 
-    # consider random expovariate here instead of randint--also see if you can make
-    # these requests behave according to patient type
-    def Doctor_Consult(env, doctor_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Doctor_Consult", "time": env.now})
-        doctor_request = doctor_resource.request()
-        yield doctor_request
-        log_event({"patient_id": patient_id, "action": "starting Doctor_Consult", "time": env.now})
-        yield env.timeout(random.randint(6, 12))
-        doctor_resource.release(doctor_request)
-        log_event({"patient_id": patient_id, "action": "finished Doctor_Consult", "time": env.now})
+def Checkout_Consult(env, nurse_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Checkout_Consult", "time": env.now})
+    checkout_request = nurse_resource.request()
+    yield checkout_request
+    log_event({"patient_id": patient_id, "action": "starting Checkout_Consult", "time": env.now})
+    yield env.timeout(random.randint(6, 18))
+    nurse_resource.release(checkout_request)
+    log_event({"patient_id": patient_id, "action": "finished Checkout_Consult", "time": env.now})
 
-    def Checkout_Consult(env, nurse_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Checkout_Consult", "time": env.now})
-        checkout_request = nurse_resource.request()
-        yield checkout_request
-        log_event({"patient_id": patient_id, "action": "starting Checkout_Consult", "time": env.now})
-        yield env.timeout(random.randint(6, 18))
-        nurse_resource.release(checkout_request)
-        log_event({"patient_id": patient_id, "action": "finished Checkout_Consult", "time": env.now})
+def Surgical_Dressing(env, doctor_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Surgical_Dressing", "time": env.now})
+    dressing_request = doctor_resource.request()
+    yield dressing_request
+    log_event({"patient_id": patient_id, "action": "starting Surgical_Dressing", "time": env.now})
+    yield env.timeout(random.randint(6, 18))
+    doctor_resource.release(dressing_request)
+    log_event({"patient_id": patient_id, "action": "finished Surgical_Dressing", "time": env.now})
 
-    def Surgical_Dressing(env, doctor_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Surgical_Dressing", "time": env.now})
-        dressing_request = doctor_resource.request()
-        yield dressing_request
-        log_event({"patient_id": patient_id, "action": "starting Surgical_Dressing", "time": env.now})
-        yield env.timeout(random.randint(6, 18))
-        doctor_resource.release(dressing_request)
-        log_event({"patient_id": patient_id, "action": "finished Surgical_Dressing", "time": env.now})
+def Surgery_Recovery(env, nurse_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Surgery_Recovery", "time": env.now})
+    recovery_request = nurse_resource.request()
+    yield recovery_request
+    log_event({"patient_id": patient_id, "action": "starting Surgery_Recovery", "time": env.now})
+    yield env.timeout(random.randint(60, 180))
+    nurse_resource.release(recovery_request)
+    log_event({"patient_id": patient_id, "action": "finished Surgery_Recovery", "time": env.now})
 
-    def Surgery_Recovery(env, nurse_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Surgery_Recovery", "time": env.now})
-        recovery_request = nurse_resource.request()
-        yield recovery_request
-        log_event({"patient_id": patient_id, "action": "starting Surgery_Recovery", "time": env.now})
-        yield env.timeout(random.randint(60, 180))
-        nurse_resource.release(recovery_request)
-        log_event({"patient_id": patient_id, "action": "finished Surgery_Recovery", "time": env.now})
-
-    def Technician_Scan_Consult(env, technician_resource, patient_id):
-        log_event({"patient_id": patient_id, "action": "requesting Technician_Scan_Consult", "time": env.now})
-        technician_request = technician_resource.request()
-        yield technician_request
-        log_event({"patient_id": patient_id, "action": "starting Technician_Scan_Consult", "time": env.now})
-        # yield env.timeout(random.expovariate(1/25))
-        yield env.timeout(random.randint(20, 88))
-        technician_resource.release(technician_request)
-        log_event({"patient_id": patient_id, "action": "finished Technician_Scan_Consult", "time": env.now})
-
-    json_flow = {
-        "events": []
-    }
-
-    def save_to_json_file():
-        with open('output.json', 'w') as file:
-            json.dump(json_flow, file, indent=4)
+def Technician_Scan_Consult(env, technician_resource, patient_id):
+    log_event({"patient_id": patient_id, "action": "requesting Technician_Scan_Consult", "time": env.now})
+    technician_request = technician_resource.request()
+    yield technician_request
+    log_event({"patient_id": patient_id, "action": "starting Technician_Scan_Consult", "time": env.now})
+    #yield env.timeout(random.expovariate(1/25))
+    yield env.timeout(random.randint(20, 88))
+    technician_resource.release(technician_request)
+    log_event({"patient_id": patient_id, "action": "finished Technician_Scan_Consult", "time": env.now})
+    
+json_flow = {
+    "events": []
+}  
+    
+#def save_to_json_file():
+#    with open('output.json', 'w') as file:
+#        json.dump(json_flow, file, indent=4)
+        
+def save_to_json_file():
+    # Save json_flow to a gzip compressed JSON file
+    with gzip.open('output.json.gz', 'wb') as file:
+        file.write(json.dumps(json_flow, indent=4).encode('utf-8'))
 
 #current
 ER_processes = {
