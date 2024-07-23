@@ -411,3 +411,29 @@ data_2019['visit_dur'] = data_2019['Cumsum_Time_Timestamp'] - pd.to_datetime(dat
 # Convert the timedelta to minutes and round it
 data_2019['visit_dur_total'] = data_2019['visit_dur'].dt.total_seconds() / 60
 data_2019['visit_dur_total'] = data_2019['visit_dur_total'].round()
+
+# Create new dataframe that cuts off data_2019 when the date_end column
+# reaches end of simulation timeframe
+
+# Set the threshold datetime
+threshold_datetime = pd.to_datetime('2019-12-31 23:59:00')
+
+# Find the index where date_end exceeds the threshold using searchsorted
+cut_index = data_2019['date_end'].searchsorted(threshold_datetime)
+
+# If cut_index is equal to the length of the DataFrame, set cut_index to the last index
+cut_index = min(cut_index, len(data_2019))
+
+# Slice the DataFrame until the index where date_end exceeds the threshold or the end of the DataFrame
+data_2019_cut = data_2019.loc[:cut_index - 1].copy()
+
+# Display the resulting DataFrame
+print(data_2019_cut)
+
+# Create a csv of tailored datetime
+data_2019_cut.to_csv('sim_2019_patient_visits_timestamp_SR.csv', index=False)
+data_2019.to_csv('sim_2019_patient_visits_timestamp_QC.csv', index=False)
+
+# display average wait time:
+average_visit_time = data_2019_cut['visit_dur'].mean() /60
+print(f"Average Visit Duration: {average_visit_time} hours")
